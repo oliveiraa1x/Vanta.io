@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanta.io - Status</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .status {
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 4px solid #00d4ff;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .status h3 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+        .status-item {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-item.ok::before {
+            content: '✓';
+            color: #00ff41;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .status-item.error::before {
+            content: '✗';
+            color: #ff006e;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .status-item.loading::before {
+            content: '⟳';
+            color: #ffbe0b;
+            font-weight: bold;
+            font-size: 1.2em;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .button-group {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .info-text {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Vanta.io</h1>
+        <p style="font-size: 1.2em; margin-bottom: 30px;">Status de Desenvolvimento</p>
+        
+        <div class="status">
+            <h3>Servidores</h3>
+            <div class="status-item ok" id="backend-status">Backend (porta 5000)</div>
+            <div class="status-item loading" id="frontend-status">Frontend (compilando...)</div>
+            <div class="status-item ok" id="db-status">Banco de Dados (MongoDB Atlas)</div>
+        </div>
+
+        <div class="info-text">
+            <p><strong>O frontend está sendo compilado...</strong></p>
+            <p style="margin-top: 10px;">Se você ainda vir esta página após alguns minutos, execute:</p>
+            <p style="margin-top: 10px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+                <code>npm start</code> na pasta <code>frontend/</code>
+            </p>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="location.href='http://localhost:5000/api/health'">
+                Testar Backend
+            </button>
+            <button class="btn-secondary" onclick="location.reload()">
+                Recarregar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Verifica status do backend
+        async function checkBackend() {
+            try {
+                const response = await fetch('http://localhost:5000/api/health');
+                if (response.ok) {
+                    document.getElementById('backend-status').classList.remove('error');
+                    document.getElementById('backend-status').classList.add('ok');
+                }
+            } catch (error) {
+                document.getElementById('backend-status').classList.remove('ok');
+                document.getElementById('backend-status').classList.add('error');
+            }
+        }
+
+        // Verifica a cada 5 segundos
+        checkBackend();
+        setInterval(checkBackend, 5000);
+    </script>
+</body>
+</html>

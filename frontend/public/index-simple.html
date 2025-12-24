@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanta.io - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: radial-gradient(ellipse at top left, #2d1b4f 0%, #0c0824 50%, #070514 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Bolhas roxas flutuantes no fundo */
+        .bubbles {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), rgba(123,47,247,0.55));
+            filter: blur(1px);
+            opacity: 0.6;
+            animation: floatUp 18s ease-in-out infinite;
+        }
+
+        .bubble:nth-child(1) { width: 160px; height: 160px; left: 10%; bottom: -20%; animation-delay: 0s; }
+        .bubble:nth-child(2) { width: 220px; height: 220px; left: 60%; bottom: -30%; animation-delay: 2s; }
+        .bubble:nth-child(3) { width: 120px; height: 120px; left: 80%; bottom: -25%; animation-delay: 4s; }
+        .bubble:nth-child(4) { width: 260px; height: 260px; left: 30%; bottom: -35%; animation-delay: 6s; }
+        .bubble:nth-child(5) { width: 140px; height: 140px; left: 50%; bottom: -15%; animation-delay: 8s; }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) translateX(0) scale(1); opacity: 0.55; }
+            40% { transform: translateY(-35vh) translateX(-10px) scale(1.05); opacity: 0.7; }
+            70% { transform: translateY(-60vh) translateX(15px) scale(1.1); opacity: 0.5; }
+            100% { transform: translateY(-80vh) translateX(-5px) scale(1.15); opacity: 0; }
+        }
+        .auth-container {
+            max-width: 400px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            font-size: 2em;
+            text-align: center;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        h2 {
+            font-size: 1.5em;
+            text-align: center;
+            margin: 10px 0 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+        }
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            color: white;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .message.error {
+            background: rgba(255, 0, 110, 0.2);
+            border: 1px solid #ff006e;
+            color: #ff85c0;
+        }
+        .message.success {
+            background: rgba(0, 255, 65, 0.2);
+            border: 1px solid #00ff41;
+            color: #7eff8d;
+        }
+        .auth-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        .auth-link a {
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .auth-link a:hover {
+            color: #7b2ff7;
+            text-decoration: underline;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 212, 255, 0.2);
+            border-top: 4px solid #00d4ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bubbles" aria-hidden="true">
+        <span class="bubble"></span>
+        <span class="bubble"></span>
+        <span class="bubble"></span>
+        <span class="bubble"></span>
+        <span class="bubble"></span>
+    </div>
+
+    <div class="auth-container" style="position: relative; z-index: 1;">
+        <h1>🎯 Vanta.io</h1>
+        <h2>Bem-vindo</h2>
+        <p style="text-align:center; margin-bottom: 12px; opacity: 0.8;">Frontend estático para testes</p>
+        <p style="text-align:center; margin-bottom: 20px; font-size: 0.9em; opacity: 0.75;">
+            Use o demo para entrar: <strong>demo@vanta.test</strong> / <strong>demo123</strong>
+        </p>
+
+        <div id="message"></div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input 
+                    id="email" 
+                    type="email" 
+                    placeholder="seu@email.com" 
+                    required 
+                />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input 
+                    id="password" 
+                    type="password" 
+                    placeholder="••••••••" 
+                    required 
+                />
+            </div>
+
+            <button type="submit" id="loginBtn">Entrar</button>
+        </form>
+
+        <div style="text-align: center; margin-top: 20px; font-size: 0.9em;">
+            <p>Teste a API:</p>
+            <button style="margin-top: 10px; width: 100%; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);" 
+                    onclick="testAPI()">
+                Testar Conexão
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = (() => {
+            const { protocol, hostname } = window.location;
+            return `${protocol}//${hostname}:5000/api`;
+        })();
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const messageDiv = document.getElementById('message');
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Entrando...';
+            messageDiv.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    messageDiv.innerHTML = `<div class="message success">✓ Login realizado com sucesso!</div>`;
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    setTimeout(() => {
+                        window.location.href = `/profile.html?user=${data.user.username}`;
+                    }, 1500);
+                } else {
+                    messageDiv.innerHTML = `<div class="message error">✗ ${data.error}</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<div class="message error">✗ Erro ao conectar com servidor</div>`;
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Entrar';
+            }
+        }
+
+        async function testAPI() {
+            const messageDiv = document.getElementById('message');
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (response.ok) {
+                    messageDiv.innerHTML = `<div class="message success">✓ API está conectada!</div>`;
+                } else {
+                    messageDiv.innerHTML = `<div class="message error">✗ API respondeu com erro</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<div class="message error">✗ Não conseguiu conectar à API</div>`;
+            }
+        }
+
+        // Testa conexão ao carregar
+        window.addEventListener('load', () => {
+            testAPI();
+        });
+    </script>
+</body>
+</html>

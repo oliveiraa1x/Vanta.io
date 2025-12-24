@@ -1,0 +1,36 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Bem-vindo ao Vanta.io</title>
+  <desc id="desc">Banner com fundo escuro, bolhas coloridas e texto de boas-vindas</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c1024" />
+      <stop offset="50%" stop-color="#12142a" />
+      <stop offset="100%" stop-color="#0a0c1a" />
+    </linearGradient>
+    <radialGradient id="bubblePurple" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#9f7aea" stop-opacity="0.95" />
+      <stop offset="60%" stop-color="#7c3aed" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#2d1b69" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="bubbleCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.95" />
+      <stop offset="60%" stop-color="#0ea5e9" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#0b7690" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="360" fill="url(#bg)" />
+  <g opacity="0.9">
+    <circle cx="160" cy="90" r="70" fill="url(#bubbleCyan)" />
+    <circle cx="340" cy="40" r="55" fill="url(#bubblePurple)" />
+    <circle cx="520" cy="120" r="80" fill="url(#bubblePurple)" />
+    <circle cx="720" cy="70" r="70" fill="url(#bubbleCyan)" />
+    <circle cx="980" cy="60" r="75" fill="url(#bubblePurple)" />
+    <circle cx="1120" cy="170" r="65" fill="url(#bubbleCyan)" />
+    <circle cx="220" cy="260" r="78" fill="url(#bubblePurple)" />
+    <circle cx="480" cy="270" r="70" fill="url(#bubbleCyan)" />
+    <circle cx="720" cy="250" r="60" fill="url(#bubblePurple)" />
+    <circle cx="960" cy="260" r="72" fill="url(#bubbleCyan)" />
+  </g>
+  <text x="600" y="165" text-anchor="middle" font-family="'Segoe UI', 'Inter', system-ui" font-size="56" font-weight="700" fill="#a78bfa" stroke="#1f1f3a" stroke-width="1.2">Bem-vindo ao Vanta.io</text>
+  <text x="600" y="220" text-anchor="middle" font-family="'Segoe UI', 'Inter', system-ui" font-size="26" font-weight="400" fill="#cbd5f5">Explore perfis personalizados únicos e inspire-se</text>
+</svg>

@@ -1,0 +1,24 @@
+{
+  "name": "vanta-io",
+  "version": "1.0.0",
+  "description": "Plataforma de perfis personalizados - Pronto para Squarespace Cloud",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "setup": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "backend": "cd backend && npm start",
+    "frontend": "cd frontend && npm start",
+    "backend:dev": "cd backend && npm run dev",
+    "frontend:dev": "cd frontend && npm start",
+    "build": "cd backend && npm install && cd ../frontend && npm run build",
+    "deploy": "npm run build && git add . && git commit -m 'Deploy' && git push squarespace main",
+    "postinstall": "cd backend && npm install --production || true"
+  },
+  "keywords": [
+    "profile",
+    "link-in-bio",
+    "url-personalizada"
+  ],
+  "author": "Vanta.io",
+  "license": "MIT"
+}
