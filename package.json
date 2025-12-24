@@ -12,7 +12,7 @@
     "frontend:dev": "cd frontend && npm start",
     "build": "cd backend && npm install && cd ../frontend && npm run build",
     "deploy": "npm run build && git add . && git commit -m 'Deploy' && git push squarespace main",
-    "postinstall": "cd backend && npm install --production || true"
+    "postinstall": "cd backend && npm install --omit=dev --no-audit --no-fund || true && cd ../frontend && npm install --no-audit --no-fund && npm run build || true"
   },
   "keywords": [
     "profile",

@@ -11,6 +11,15 @@ const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || '';
 
+// Optional OAuth creds for other platforms (placeholders)
+const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || '';
+const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || '';
+const MICROSOFT_REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI || '';
+
+const STEAM_API_KEY = process.env.STEAM_API_KEY || '';
+const STEAM_RETURN_URL = process.env.STEAM_RETURN_URL || 'http://localhost:3000/dashboard';
+const STEAM_REALM = process.env.STEAM_REALM || 'http://localhost:3000';
+
 // Obter perfil do usuário logado
 router.get('/me', authenticateToken, async (req, res) => {
   try {
@@ -39,6 +48,277 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== Connections (Steam) =====
+// Fornecer URL de autorização do Steam (OpenID)
+router.get('/steam/auth-url', authenticateToken, (req, res) => {
+  const params = new URLSearchParams({
+    'openid.ns': 'http://specs.openid.net/auth/2.0',
+    'openid.mode': 'checkid_setup',
+    'openid.return_to': STEAM_RETURN_URL,
+    'openid.realm': STEAM_REALM,
+    'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
+    'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select'
+  });
+  const authUrl = `https://steamcommunity.com/openid/login?${params.toString()}`;
+  res.json({ url: authUrl });
+});
+
+// Conectar conta do Steam usando OpenID response
+router.post('/steam/connect', authenticateToken, async (req, res) => {
+  try {
+    const { openidParams } = req.body;
+    if (!openidParams || !openidParams['openid.claimed_id']) {
+      return res.status(400).json({ error: 'Parâmetros do Steam ausentes' });
+    }
+
+    // Extrair Steam ID da claimed_id
+    const claimedId = openidParams['openid.claimed_id'];
+    const steamIdMatch = claimedId.match(/\/id\/(\d+)$/);
+    if (!steamIdMatch) {
+      return res.status(400).json({ error: 'Steam ID inválido' });
+    }
+    const steamId = steamIdMatch[1];
+
+    // Verificar se já está vinculado a outro usuário
+    const existing = await User.findOne({ 'connections.steam.steamId': steamId });
+    if (existing && existing._id.toString() !== req.user.userId) {
+      return res.status(400).json({ error: 'Esta conta Steam já está vinculada a outro usuário' });
+    }
+
+    // Buscar dados do perfil Steam (se API Key disponível)
+    let steamUsername = `Steam User ${steamId}`;
+    if (STEAM_API_KEY) {
+      try {
+        const profileResp = await fetch(
+          `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId}`
+        );
+        if (profileResp.ok) {
+          const profileData = await profileResp.json();
+          if (profileData.response?.players?.[0]) {
+            steamUsername = profileData.response.players[0].personaname || steamUsername;
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar perfil Steam:', err.message);
+      }
+    }
+
+    // Atualizar conexões do usuário
+    const user = await User.findById(req.user.userId);
+    const current = user.connections || {};
+    current.steam = {
+      steamId: steamId,
+      username: steamUsername
+    };
+    await User.findByIdAndUpdate(req.user.userId, { connections: current });
+
+    res.json({
+      message: 'Steam conectado com sucesso',
+      steam: { id: steamId, username: steamUsername }
+    });
+  } catch (error) {
+    console.error('Erro ao conectar Steam:', error.message);
+    res.status(500).json({ error: 'Erro ao conectar Steam' });
+  }
+});
+
+// Buscar jogos da Steam do usuário
+router.get('/steam/games', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    const steamId = user.connections?.steam?.steamId;
+    
+    if (!steamId) {
+      return res.status(400).json({ error: 'Steam não conectada' });
+    }
+
+    if (!STEAM_API_KEY) {
+      return res.status(500).json({ error: 'Steam API Key não configurada' });
+    }
+
+    console.log('Buscando jogos para Steam ID:', steamId);
+
+    const gamesResp = await fetch(
+      `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${STEAM_API_KEY}&steamid=${steamId}&include_appinfo=true&include_played_free_games=true`
+    );
+
+    if (!gamesResp.ok) {
+      console.error('Steam API retornou erro:', gamesResp.status, gamesResp.statusText);
+      return res.status(500).json({ error: 'Erro ao buscar jogos da Steam. Verifique se seu perfil está público.' });
+    }
+
+    const gamesData = await gamesResp.json();
+    console.log('Resposta da Steam API:', JSON.stringify(gamesData, null, 2));
+    
+    const games = gamesData.response?.games || [];
+
+    if (games.length === 0) {
+      return res.json({ 
+        games: [], 
+        message: 'Nenhum jogo encontrado. Certifique-se de que seu perfil e biblioteca Steam estão públicos em: Perfil → Editar Perfil → Configurações de Privacidade → Detalhes do jogo: Público' 
+      });
+    }
+
+    // Ordenar por tempo jogado (decrescente)
+    games.sort((a, b) => (b.playtime_forever || 0) - (a.playtime_forever || 0));
+
+    res.json({ games: games.slice(0, 50) }); // Retornar top 50
+  } catch (error) {
+    console.error('Erro ao buscar jogos Steam:', error.message);
+    res.status(500).json({ error: 'Erro ao buscar jogos' });
+  }
+});
+
+// Selecionar jogo destacado
+router.post('/steam/featured-game', authenticateToken, async (req, res) => {
+  try {
+    const { appid, name, img_icon_url, img_logo_url, playtime_forever } = req.body;
+    
+    if (!appid) {
+      return res.status(400).json({ error: 'App ID é obrigatório' });
+    }
+
+    const user = await User.findById(req.user.userId);
+    const current = user.connections || {};
+    
+    if (!current.steam) {
+      return res.status(400).json({ error: 'Steam não conectada' });
+    }
+
+    current.steamFeaturedGame = {
+      appid,
+      name,
+      img_icon_url,
+      img_logo_url,
+      playtime_forever
+    };
+
+    await User.findByIdAndUpdate(req.user.userId, { connections: current });
+    res.json({ message: 'Jogo destacado atualizado', game: current.steamFeaturedGame });
+  } catch (error) {
+    console.error('Erro ao atualizar jogo destacado:', error.message);
+    res.status(500).json({ error: 'Erro ao atualizar jogo' });
+  }
+});
+
+// Buscar banner da Steam
+router.get('/steam/banner', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    const steamId = user.connections?.steam?.steamId;
+    
+    if (!steamId) {
+      return res.status(400).json({ error: 'Steam não conectada' });
+    }
+
+    if (!STEAM_API_KEY) {
+      return res.status(500).json({ error: 'Steam API Key não configurada' });
+    }
+
+    const profileResp = await fetch(
+      `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId}`
+    );
+
+    if (!profileResp.ok) {
+      return res.status(500).json({ error: 'Erro ao buscar perfil da Steam' });
+    }
+
+    const profileData = await profileResp.json();
+    const player = profileData.response?.players?.[0];
+    
+    if (!player) {
+      return res.status(404).json({ error: 'Perfil Steam não encontrado' });
+    }
+
+    // Steam profile background (se tiver)
+    const bannerUrl = player.profilebackground 
+      ? `https://steamcdn-a.akamaihd.net/steamcommunity/public/images/items/${player.profilebackground.substring(0, player.profilebackground.indexOf('_'))}/profile_background.jpg`
+      : null;
+
+    res.json({ 
+      banner: bannerUrl,
+      avatar: player.avatarfull,
+      profileurl: player.profileurl
+    });
+  } catch (error) {
+    console.error('Erro ao buscar banner Steam:', error.message);
+    res.status(500).json({ error: 'Erro ao buscar banner' });
+  }
+});
+
+// Get current connections state
+router.get('/connections', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('connections');
+    const c = user?.connections || {};
+    res.json({
+      steam: !!c.steam,
+      details: c
+    });
+  } catch (error) {
+    console.error('Erro ao obter conexões:', error.message);
+    res.status(500).json({ error: 'Erro ao obter conexões' });
+  }
+});
+
+// Connect platform (simple identifier-based for agora; OAuth pode substituir depois)
+router.post('/connections/:platform/connect', authenticateToken, async (req, res) => {
+  try {
+    const { platform } = req.params;
+    const allowed = ['steam'];
+    if (!allowed.includes(platform)) {
+      return res.status(400).json({ error: 'Plataforma inválida' });
+    }
+
+    const { identifier } = req.body; // e.g., steamid64
+
+    // If no identifier and OAuth creds exist, we could start OAuth here
+    if (!identifier) {
+      // Retorna informação sobre configuração de OAuth (futuro)
+      const oauthConfigured = (platform === 'steam' && STEAM_API_KEY);
+      return res.status(400).json({
+        error: 'Identifier ausente',
+        hint: 'Envie um identificador (steamid64) no corpo. OAuth poderá ser adicionado depois.',
+        oauthConfigured
+      });
+    }
+
+    const user = await User.findById(req.user.userId);
+    const current = user.connections || {};
+    current[platform] = identifier;
+    await User.findByIdAndUpdate(req.user.userId, { connections: current });
+
+    res.json({ message: `${platform} conectado`, connections: current });
+  } catch (error) {
+    console.error('Erro ao conectar plataforma:', error.message);
+    res.status(500).json({ error: 'Erro ao conectar plataforma' });
+  }
+});
+
+// Disconnect platform
+router.post('/connections/:platform/disconnect', authenticateToken, async (req, res) => {
+  try {
+    const { platform } = req.params;
+    const allowed = ['steam'];
+    if (!allowed.includes(platform)) {
+      return res.status(400).json({ error: 'Plataforma inválida' });
+    }
+
+    const user = await User.findById(req.user.userId);
+    const current = user.connections || {};
+    delete current[platform];
+    if (platform === 'steam') {
+      delete current.steamFeaturedGame;
+    }
+    await User.findByIdAndUpdate(req.user.userId, { connections: current });
+
+    res.json({ message: `${platform} desconectado`, connections: current });
+  } catch (error) {
+    console.error('Erro ao desconectar plataforma:', error.message);
+    res.status(500).json({ error: 'Erro ao desconectar plataforma' });
+  }
+});
+
 // Atualizar perfil
 router.put('/update', authenticateToken, async (req, res) => {
   try {
@@ -49,7 +329,7 @@ router.put('/update', authenticateToken, async (req, res) => {
     const selectedTheme = validThemes.includes(theme) ? theme : 'dark';
     
     // Validar efeito de fundo
-    const validEffects = ['none', 'falling-stars', 'floating-bubbles', 'black-hole'];
+    const validEffects = ['none', 'falling-stars', 'floating-bubbles', 'black-hole', 'video'];
     const selectedEffect = validEffects.includes(backgroundEffect) ? backgroundEffect : 'none';
 
     await User.findByIdAndUpdate(
@@ -145,6 +425,58 @@ router.post('/upload/media', authenticateToken, upload.single('media'), async (r
   } catch (error) {
     console.error('Erro ao fazer upload de mídia:', error.message);
     res.status(500).json({ error: 'Erro ao fazer upload de mídia' });
+  }
+});
+
+// Upload de áudio de fundo (toca em segundo plano sem aparecer no perfil)
+router.post('/upload/background-audio', authenticateToken, upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo de áudio enviado' });
+    }
+
+    const audioUrl = `/uploads/${req.file.filename}`;
+    const deviceType = req.body.deviceType || 'desktop'; // 'desktop' ou 'mobile'
+
+    const updateData = {};
+    if (deviceType === 'mobile') {
+      updateData.backgroundAudioMobile = audioUrl;
+    } else {
+      updateData.backgroundAudioDesktop = audioUrl;
+    }
+
+    await User.findByIdAndUpdate(req.user.userId, updateData);
+
+    res.status(200).json({
+      message: `Áudio de fundo para ${deviceType} atualizado com sucesso`,
+      url: audioUrl
+    });
+  } catch (error) {
+    console.error('Erro ao fazer upload de áudio de fundo:', error.message);
+    res.status(500).json({ error: 'Erro ao fazer upload de áudio de fundo' });
+  }
+});
+
+// Upload de vídeo de fundo (até 15 segundos)
+router.post('/upload/background-video', authenticateToken, upload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo de vídeo enviado' });
+    }
+
+    const videoUrl = `/uploads/${req.file.filename}`;
+    await User.findByIdAndUpdate(req.user.userId, { 
+      backgroundVideo: videoUrl,
+      backgroundEffect: 'video' // Atualizar efeito para vídeo
+    });
+
+    res.status(200).json({
+      message: 'Vídeo de fundo atualizado com sucesso',
+      url: videoUrl
+    });
+  } catch (error) {
+    console.error('Erro ao fazer upload de vídeo de fundo:', error.message);
+    res.status(500).json({ error: 'Erro ao fazer upload de vídeo de fundo' });
   }
 });
 
@@ -406,27 +738,91 @@ router.post('/discord/connect', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Esta conta do Discord já está vinculada a outro usuário' });
     }
 
+    // Converter flags do Discord em badges
+    const discordBadges = [];
+    const publicFlags = discordUser.public_flags || 0;
+    
+    const discordFlagMap = {
+      1: { code: 'discord_staff', name: 'Discord Staff', iconUrl: 'https://cdn.discordapp.com/badge-icons/5e74e9b61934fc1f67c65515d1f7e60d.png' },
+      2: { code: 'discord_partner', name: 'Parceiro Discord', iconUrl: 'https://cdn.discordapp.com/badge-icons/3f9748e53446a137a052f3454e2de41e.png' },
+      4: { code: 'hypesquad_events', name: 'HypeSquad Events', iconUrl: 'https://cdn.discordapp.com/badge-icons/bf01d1073931f921909045f3a39fd264.png' },
+      8: { code: 'bug_hunter_1', name: 'Bug Hunter Nível 1', iconUrl: 'https://cdn.discordapp.com/badge-icons/2717692c7dca7289b35297368a940dd0.png' },
+      64: { code: 'hypesquad_bravery', name: 'HypeSquad Bravery', iconUrl: 'https://cdn.discordapp.com/badge-icons/8a88d63823d8a71cd5e390baa45efa02.png' },
+      128: { code: 'hypesquad_brilliance', name: 'HypeSquad Brilliance', iconUrl: 'https://cdn.discordapp.com/badge-icons/011940fd013da3f7fb926e4a1cd2e618.png' },
+      256: { code: 'hypesquad_balance', name: 'HypeSquad Balance', iconUrl: 'https://cdn.discordapp.com/badge-icons/3aa41de486fa12454c3761e8e223442e.png' },
+      512: { code: 'early_supporter', name: 'Early Supporter', iconUrl: 'https://cdn.discordapp.com/badge-icons/7060786766c9c840eb3019e725d2b358.png' },
+      16384: { code: 'bug_hunter_2', name: 'Bug Hunter Nível 2', iconUrl: 'https://cdn.discordapp.com/badge-icons/848f79194d4be5ff5f81505cbd0ce1e6.png' },
+      131072: { code: 'verified_bot_dev', name: 'Desenvolvedor de Bot Verificado', iconUrl: 'https://cdn.discordapp.com/badge-icons/6df5892e0f35b051f8b61eace34f4967.png' },
+      4194304: { code: 'active_developer', name: 'Desenvolvedor Ativo', iconUrl: 'https://cdn.discordapp.com/badge-icons/6bdc42827a38498929a4920da12695d9.png' }
+    };
+
+    for (const [flag, badge] of Object.entries(discordFlagMap)) {
+      if ((publicFlags & parseInt(flag)) !== 0) {
+        discordBadges.push({
+          code: badge.code,
+          name: badge.name,
+          iconUrl: badge.iconUrl,
+          description: `Badge do Discord: ${badge.name}`,
+          source: 'discord',
+          awardedAt: new Date()
+        });
+      }
+    }
+
+    // Adicionar badge de Nitro (premium_type)
+    const premiumType = discordUser.premium_type || 0;
+    if (premiumType === 2) {
+      discordBadges.push({
+        code: 'discord_nitro',
+        name: 'Discord Nitro',
+        iconUrl: 'https://cdn.discordapp.com/badge-icons/0e291f67631e374140365a44a1574eae.png',
+        description: 'Discord Nitro',
+        source: 'discord',
+        awardedAt: new Date()
+      });
+    } else if (premiumType === 1) {
+      discordBadges.push({
+        code: 'discord_nitro_classic',
+        name: 'Discord Nitro Classic',
+        iconUrl: 'https://cdn.discordapp.com/badge-icons/7e46d5595367ef7588c4e87feba64666.png',
+        description: 'Discord Nitro Classic',
+        source: 'discord',
+        awardedAt: new Date()
+      });
+    }
+
     const update = {
       discordId: discordUser.id,
       discordUsername: `${discordUser.username}${discordUser.discriminator && discordUser.discriminator !== '0' ? '#' + discordUser.discriminator : ''}`,
       discordAvatar: discordUser.avatar
         ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
-        : null
+        : null,
+      discordPublicFlags: typeof discordUser.public_flags === 'number' ? discordUser.public_flags : undefined,
+      discordAvatarDecoration: discordUser.avatar_decoration_data?.asset
+        ? `https://cdn.discordapp.com/avatar-decoration-presets/${discordUser.avatar_decoration_data.asset}.png?size=256`
+        : (discordUser.avatar_decoration ? `https://cdn.discordapp.com/avatar-decoration-presets/${discordUser.avatar_decoration}.png?size=256` : undefined)
     };
 
-    const user = await User.findByIdAndUpdate(
-      req.user.userId,
-      update,
-      { new: true }
-    ).select('-password');
+    // Atualizar usuário e adicionar badges do Discord
+    const user = await User.findById(req.user.userId);
+    Object.assign(user, update);
+    
+    // Remover badges antigas do Discord e adicionar novas
+    user.badges = (user.badges || []).filter(b => b.source !== 'discord');
+    user.badges.push(...discordBadges);
+    
+    await user.save();
+    
+    const updatedUser = await User.findById(req.user.userId).select('-password');
 
     res.json({
       message: 'Discord conectado com sucesso',
       discord: {
-        id: user.discordId,
-        username: user.discordUsername,
-        avatar: user.discordAvatar
-      }
+        id: updatedUser.discordId,
+        username: updatedUser.discordUsername,
+        avatar: updatedUser.discordAvatar
+      },
+      badgesAdded: discordBadges.length
     });
   } catch (error) {
     console.error('Erro ao conectar Discord:', error.message);

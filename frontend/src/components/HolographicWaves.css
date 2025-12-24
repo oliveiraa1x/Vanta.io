@@ -1,0 +1,203 @@
+.phoenix-container {
+  position: fixed;
+  right: 5%;
+  top: 15%;
+  width: 900px;
+  height: 900px;
+  pointer-events: none;
+  z-index: 2;
+  animation: floatPhoenix 12s ease-in-out infinite;
+}
+
+@keyframes floatPhoenix {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-30px) scale(1.05);
+  }
+}
+
+/* Black Hole Core */
+.phoenix-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, 
+    rgba(0, 0, 0, 1) 0%,
+    rgba(10, 10, 30, 0.95) 40%,
+    rgba(20, 30, 60, 0.8) 70%,
+    transparent 100%);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 80px rgba(100, 150, 255, 0.6),
+    0 0 120px rgba(150, 200, 255, 0.4),
+    inset 0 0 60px rgba(0, 0, 0, 0.9);
+  z-index: 10;
+  animation: corePulse 4s ease-in-out infinite;
+}
+
+@keyframes corePulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 80px rgba(100, 150, 255, 0.6),
+      0 0 120px rgba(150, 200, 255, 0.4),
+      inset 0 0 60px rgba(0, 0, 0, 0.9);
+  }
+  50% {
+    box-shadow: 
+      0 0 100px rgba(100, 150, 255, 0.8),
+      0 0 150px rgba(150, 200, 255, 0.6),
+      inset 0 0 70px rgba(0, 0, 0, 0.95);
+  }
+}
+
+/* Accretion Rings */
+.accretion-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotateX(75deg);
+  border-radius: 50%;
+  border: 3px solid transparent;
+  box-shadow: 
+    0 0 30px rgba(150, 200, 255, 0.7),
+    0 0 60px rgba(100, 180, 255, 0.5),
+    inset 0 0 40px rgba(200, 220, 255, 0.4);
+  animation: ringGlow 3s ease-in-out infinite;
+}
+
+@keyframes ringGlow {
+  0%, 100% {
+    filter: blur(2px) brightness(1);
+  }
+  50% {
+    filter: blur(3px) brightness(1.3);
+  }
+}
+
+.ring-1 {
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(ellipse at center,
+    transparent 35%,
+    rgba(150, 200, 255, 0.5) 38%,
+    rgba(200, 220, 255, 0.7) 42%,
+    rgba(180, 210, 255, 0.6) 45%,
+    rgba(255, 240, 255, 0.4) 48%,
+    transparent 52%);
+  animation: orbitRing1 12s linear infinite, ringGlow 3s ease-in-out infinite;
+}
+
+.ring-2 {
+  width: 630px;
+  height: 630px;
+  background: radial-gradient(ellipse at center,
+    transparent 35%,
+    rgba(100, 180, 255, 0.4) 38%,
+    rgba(150, 200, 255, 0.6) 42%,
+    rgba(120, 190, 255, 0.5) 45%,
+    rgba(200, 220, 255, 0.35) 48%,
+    transparent 52%);
+  animation: orbitRing2 16s linear infinite, ringGlow 3s ease-in-out infinite;
+  animation-delay: 0s, -1s;
+}
+
+.ring-3 {
+  width: 780px;
+  height: 780px;
+  background: radial-gradient(ellipse at center,
+    transparent 35%,
+    rgba(80, 160, 255, 0.3) 38%,
+    rgba(120, 190, 255, 0.45) 42%,
+    rgba(100, 180, 255, 0.4) 45%,
+    rgba(150, 200, 255, 0.3) 48%,
+    transparent 52%);
+  animation: orbitRing3 20s linear infinite, ringGlow 3s ease-in-out infinite;
+  animation-delay: 0s, -2s;
+}
+
+/* Light Beams */
+.light-beam {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  width: 300px;
+  height: 8px;
+  filter: blur(10px);
+}
+
+.beam-1 {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(200, 220, 255, 0.9) 50%,
+    transparent 100%);
+  transform: translate(-50%, -50%) rotate(15deg);
+  animation: beamPulse1 2.5s ease-in-out infinite;
+}
+
+.beam-2 {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(150, 200, 255, 0.7) 50%,
+    transparent 100%);
+  transform: translate(-50%, -50%) rotate(-15deg);
+  animation: beamPulse2 2.5s ease-in-out infinite;
+  animation-delay: -1.25s;
+}
+
+/* Animations */
+
+/* Animations */
+@keyframes orbitRing1 {
+  from {
+    transform: translate(-50%, -50%) rotateX(75deg) rotateZ(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotateX(75deg) rotateZ(360deg);
+  }
+}
+
+@keyframes orbitRing2 {
+  from {
+    transform: translate(-50%, -50%) rotateX(75deg) rotateZ(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotateX(75deg) rotateZ(360deg);
+  }
+}
+
+@keyframes orbitRing3 {
+  from {
+    transform: translate(-50%, -50%) rotateX(75deg) rotateZ(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotateX(75deg) rotateZ(360deg);
+  }
+}
+
+@keyframes beamPulse1 {
+  0%, 100% {
+    opacity: 0.4;
+    width: 300px;
+  }
+  50% {
+    opacity: 0.9;
+    width: 420px;
+  }
+}
+
+@keyframes beamPulse2 {
+  0%, 100% {
+    opacity: 0.3;
+    width: 270px;
+  }
+  50% {
+    opacity: 0.7;
+    width: 380px;
+  }
+}

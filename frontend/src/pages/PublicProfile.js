@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import FallingStars from '../components/FallingStars';
@@ -13,6 +13,15 @@ function PublicProfile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [colors, setColors] = useState({ primary: '#60a5fa', secondary: '#c084fc' });
+  const [isMobile, setIsMobile] = useState(false);
+  const audioRef = useRef(null);
+
+  // Detectar mobile
+  useEffect(() => {
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+    setIsMobile(isMobileDevice);
+  }, []);
 
   // Garantir que o fundo da página fique transparente/escuro para o efeito aparecer
   useEffect(() => {
@@ -22,9 +31,34 @@ function PublicProfile() {
     document.body.style.background = 'transparent';
     document.body.style.color = '#fff';
 
+    // Permitir áudio sem mute após interação
+    const tryUnmute = () => {
+      const el = audioRef.current;
+      if (!el) return;
+      try {
+        el.muted = false;
+        el.volume = 0.6;
+        const p = el.play();
+        if (p && typeof p.then === 'function') p.catch(() => {});
+      } catch (_) {}
+      window.removeEventListener('click', tryUnmute);
+      window.removeEventListener('touchend', tryUnmute);
+      window.removeEventListener('pointerdown', tryUnmute);
+      window.removeEventListener('keydown', tryUnmute);
+    };
+
+    window.addEventListener('click', tryUnmute);
+    window.addEventListener('touchend', tryUnmute);
+    window.addEventListener('pointerdown', tryUnmute);
+    window.addEventListener('keydown', tryUnmute);
+
     return () => {
       document.body.style.background = prevBackground;
       document.body.style.color = prevColor;
+      window.removeEventListener('click', tryUnmute);
+      window.removeEventListener('touchend', tryUnmute);
+      window.removeEventListener('pointerdown', tryUnmute);
+      window.removeEventListener('keydown', tryUnmute);
     };
   }, []);
 
@@ -67,9 +101,41 @@ function PublicProfile() {
     );
   }
 
-  const { avatar, bannerImage, displayName, bio, theme, backgroundEffect, links, media } = profile.profile;
+  const { avatar, bannerImage, displayName, bio, theme, backgroundEffect, backgroundVideo, backgroundAudio, backgroundAudioDesktop, backgroundAudioMobile, links, media, connections, badges, discordAvatarDecoration } = profile.profile;
+
+  // Selecionar áudio apropriado para o device
+  const selectedAudio = isMobile ? (backgroundAudioMobile || backgroundAudio) : (backgroundAudioDesktop || backgroundAudio);
+
+  // Normalizar áudio URL para HTTPS se necessário (sem hooks, função pura inline)
+  const normalizedAudio = (() => {
+    if (!selectedAudio) return '';
+    try {
+      let u = String(selectedAudio).trim();
+      if (u.startsWith('http://')) u = 'https://' + u.slice(7);
+      return u;
+    } catch (_) { return selectedAudio; }
+  })();
 
   const renderBackgroundEffect = () => {
+    // Se houver vídeo de fundo, renderizar vídeo
+    if (backgroundEffect === 'video' && backgroundVideo) {
+      return (
+        <video 
+          key={`video-${backgroundVideo}`}
+          className="background-video"
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+        >
+          <source src={backgroundVideo} type="video/mp4" />
+          <source src={backgroundVideo} type="video/webm" />
+          <source src={backgroundVideo} type="image/gif" />
+          Seu navegador não suporta vídeo
+        </video>
+      );
+    }
+    
     switch (backgroundEffect) {
       case 'falling-stars':
         return <FallingStars primaryColor={colors.primary} secondaryColor={colors.secondary} />;
@@ -126,6 +192,8 @@ function PublicProfile() {
         return (<svg {...commonProps}><path d="M4.98 3.5C4.98 4.88 3.86 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM0 8h5v16H0V8zm7.5 0H12v2.2h.07c.62-1.17 2.13-2.4 4.38-2.4 4.68 0 5.55 3.08 5.55 7.1V24h-5V16.4c0-1.81-.03-4.13-2.52-4.13-2.53 0-2.92 1.98-2.92 4v7.73H7.5V8z"/></svg>);
       case 'twitch':
         return (<svg {...commonProps}><path d="M4 2h16v10l-5 5h-4l-3 3H6v-3H2V2zm3 2v8h3V6h3v6h3V4H7z"/></svg>);
+      case 'steam':
+        return (<svg {...commonProps}><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10a9.95 9.95 0 0 1-7.8-3.8l2.7-1.1c.4 1.2 1.5 2 2.8 2 1.6 0 2.9-1.3 2.9-2.9s-1.3-2.9-2.9-2.9h-.1l-2.8 1.2a3.3 3.3 0 0 0-2.7-.2A8 8 0 1 0 12 20c4.4 0 8-3.6 8-8s-3.6-8-8-8zm-4.3 13.5a2 2 0 0 0 2.4-1.4 2 2 0 0 0-1.4-2.4L6.5 13a2 2 0 0 0 1.2 2.5zm9.6-5.4c0 1.6-1.3 2.9-2.9 2.9s-2.9-1.3-2.9-2.9 1.3-2.9 2.9-2.9 2.9 1.3 2.9 2.9zm-2.9-2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>);
       default:
         return (<svg {...commonProps}><path d="M4 4h16v16H4z"/></svg>);
     }
@@ -135,6 +203,28 @@ function PublicProfile() {
     <div className="public-profile">
       {renderBackgroundEffect()}
       
+      {/* Áudio ambiente em segundo plano */}
+      {normalizedAudio && (
+        <audio 
+          key={`audio-${normalizedAudio}`}
+          ref={audioRef}
+          autoPlay 
+          loop 
+          muted
+          preload="auto"
+          crossOrigin="anonymous"
+          style={{display: 'none'}}
+          onCanPlay={() => { try { audioRef.current && audioRef.current.play(); } catch(_){} }}
+        >
+          <source src={normalizedAudio} type="audio/mpeg" />
+          <source src={normalizedAudio} type="audio/wav" />
+          <source src={normalizedAudio} type="audio/ogg" />
+          <source src={normalizedAudio} type="audio/x-m4a" />
+          <source src={normalizedAudio} type="video/mp4" />
+          <source src={normalizedAudio} type="video/webm" />
+        </audio>
+      )}
+      
       {bannerImage && (
         <div className="banner">
           <img src={bannerImage} alt="Banner" />
@@ -143,20 +233,117 @@ function PublicProfile() {
 
       <div className="profile-content">
         <div className={`profile-header theme-${theme}`}>
-          {avatar && <img src={avatar} alt={displayName} className="avatar" />}
+          {/* Avatar com Decoração Discord e Badges */}
+          <div className="avatar-section">
+            {avatar && (
+              <div className="avatar-wrapper">
+                <img src={avatar} alt={displayName} className="avatar" />
+                {discordAvatarDecoration && (
+                  <img
+                    src={discordAvatarDecoration}
+                    alt="Discord Decoration"
+                    className="avatar-decoration"
+                    onError={(e) => {
+                      // Se a decoração quebrar, esconda para não mostrar ícone quebrado
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                )}
+              </div>
+            )}
+            
+            {/* Badges em destaque */}
+            {badges && badges.length > 0 && (
+              <div className="badges-showcase">
+                {badges.map((b) => {
+                  const code = String(b.code || '').toLowerCase();
+                  const defaultSrc = code.includes('nitro') && !code.includes('classic')
+                    ? 'https://cdn.discordapp.com/badge-icons/0e291f67631e374140365a44a1574eae.png'
+                    : code.includes('classic')
+                      ? 'https://cdn.discordapp.com/badge-icons/7e46d5595367ef7588c4e87feba64666.png'
+                      : 'https://cdn-icons-png.flaticon.com/512/7595/7595571.png';
+                  const src = b.iconUrl || defaultSrc;
+                  return (
+                    <div key={b._id || b.code} className="badge-icon" title={b.description || b.name}>
+                      <img
+                        src={src}
+                        alt={b.name}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = defaultSrc;
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Nome e Info */}
           <h1>{displayName}</h1>
-          <p className="username">@{username}</p>
+          <p className="username">@{profile.username}</p>
+          
+          {/* Bio */}
           {bio && <p className="bio">{bio}</p>}
+          
           <p className="created-date">
             Membro desde {new Date(profile.createdAt).toLocaleDateString('pt-BR')}
           </p>
         </div>
 
-        {links && links.length > 0 && (
+        {/* Jogo em Destaque */}
+        {connections?.steamFeaturedGame && (
+          <div className="featured-game-section">
+            <h2>Jogando Agora</h2>
+            <div className="featured-game-card">
+              <div className="game-banner">
+                <img 
+                  src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${connections.steamFeaturedGame.appid}/library_600x900.jpg`}
+                  alt={connections.steamFeaturedGame.name}
+                  onError={(e) => { 
+                    e.target.src = `https://media.steampowered.com/steamcommunity/public/images/apps/${connections.steamFeaturedGame.appid}/${connections.steamFeaturedGame.img_logo_url}.jpg`;
+                  }}
+                />
+              </div>
+              <div className="game-details">
+                <h3>{connections.steamFeaturedGame.name}</h3>
+                <p className="game-hours">
+                  {Math.round(connections.steamFeaturedGame.playtime_forever / 60)} horas jogadas
+                </p>
+                <a 
+                  href={`https://store.steampowered.com/app/${connections.steamFeaturedGame.appid}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="view-on-steam-btn"
+                >
+                  Ver na Steam
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Links Personalizados */}
+        {(links && links.length > 0 || connections?.steam?.profileurl) && (
           <div className="links-section">
             <h2>Links</h2>
             <div className="social-icons">
-              {links.map(link => {
+              {/* Steam connection */}
+              {connections?.steam?.profileurl && (
+                <a
+                  href={connections.steam.profileurl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="social-icon steam"
+                  title="Steam"
+                >
+                  {getPlatformIcon('steam')}
+                </a>
+              )}
+              
+              {/* User links */}
+              {links && links.map(link => {
                 const platform = (link.platform || detectPlatform(link.url));
                 const Icon = getPlatformIcon(platform);
                 return (
@@ -176,32 +363,10 @@ function PublicProfile() {
           </div>
         )}
 
-        {media && media.length > 0 && (
-          <div className="media-section">
-            <h2>Galeria</h2>
-            <div className="media-container">
-              {media.map(item => (
-                <div key={item._id} className="media-item">
-                  {item.type === 'audio' ? (
-                    <div className="media-audio">
-                      <audio controls src={item.url} />
-                      <h4>{item.title}</h4>
-                    </div>
-                  ) : (
-                    <div className="media-image">
-                      <img src={item.url} alt={item.title} />
-                      <h4>{item.title}</h4>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
+        {/* Footer */}
         <div className="footer">
           <p>Criado com ❤️ em Vanta.io</p>
-          <Link to="/login">Crie seu próprio perfil</Link>
+          <Link to="/register">Crie seu perfil</Link>
         </div>
       </div>
     </div>

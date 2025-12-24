@@ -7,6 +7,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import PublicProfile from './pages/PublicProfile';
 import PrivateRoute from './components/PrivateRoute';
+import AdminRoute from './components/AdminRoute';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -21,6 +23,14 @@ function App() {
             <PrivateRoute>
               <Dashboard />
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
           }
         />
         <Route path="/:username" element={<PublicProfile />} />

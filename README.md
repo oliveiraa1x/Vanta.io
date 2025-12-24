@@ -4,7 +4,11 @@ Uma plataforma web moderna e escalável para criação de perfis personalizados 
 
 # Vanta.io 🌌
 
-![Bem-vindo ao Vanta.io](docs/banner.svg)
+<div align="center">
+  <img src="docs/banner.jpg" alt="Vanta.io - Perfis Personalizados" width="800"/>
+</div>
+
+<br/>
 
 Vanta.io é uma plataforma moderna para criação e exploração de **perfis personalizados**, focada em identidade digital, visual imersivo e experiência fluida.  
 O projeto foi desenvolvido para oferecer um ambiente intuitivo, elegante e escalável, unindo design futurista com funcionalidades práticas.

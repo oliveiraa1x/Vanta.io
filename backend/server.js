@@ -43,11 +43,13 @@ app.use(express.static(frontendBuildPath));
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const publicProfileRoutes = require('./routes/publicProfile');
+const adminRoutes = require('./routes/admin');
 
 // Usar rotas
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api', publicProfileRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

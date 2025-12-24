@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import FloatingBubbles from '../components/FloatingBubbles';
+import SoapFilm from '../components/SoapFilm';
 import './Auth.css';
 
 function Register() {
@@ -12,6 +12,7 @@ function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(null);
+  const [authMethod, setAuthMethod] = useState(null); // 'email' | 'discord'
   const navigate = useNavigate();
 
   const checkUsername = async (name) => {
@@ -65,81 +66,112 @@ function Register() {
     }
   };
 
+  const handleDiscordLogin = () => {
+    setLoading(true);
+    window.location.href = '/api/auth/discord';
+  };
+
   return (
     <div className="auth-container">
-      <FloatingBubbles primaryColor="#06b6d4" secondaryColor="#8b5cf6" />
+      <SoapFilm />
       <div className="auth-card">
-        <h1>🎯 Vanta.io</h1>
-        <h2>Crie sua conta</h2>
-        <p>Comece seu perfil personalizado agora</p>
+        <div className="brand-header">
+          <img src="/favicon.png" alt="Vanta.io" className="brand-logo" />
+          <h1>Vanta.io</h1>
+        </div>
 
-        {error && <div className="error-message">{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">
-              Username 
-              {usernameAvailable === true && <span className="status-ok">✓</span>}
-              {usernameAvailable === false && <span className="status-error">✗</span>}
-            </label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={handleUsernameChange}
-              placeholder="seu_username"
-              required
-              maxLength="20"
-            />
-            <small>Seu perfil estará em vanta.io/@{username || 'username'}</small>
+        {!authMethod && (
+          <div className="auth-choice">
+            <h2>Como quer continuar?</h2>
+            <p>Conecte com Discord ou use seu email.</p>
+            <div className="auth-choice-buttons">
+              <button type="button" className="btn-discord" onClick={handleDiscordLogin} disabled={loading}>
+                Entrar com Discord
+              </button>
+              <button type="button" className="btn-email" onClick={() => setAuthMethod('email')}>
+                Usar email
+              </button>
+            </div>
+            <p className="auth-link">
+              Já tem conta? <Link to="/login">Fazer login</Link>
+            </p>
           </div>
+        )}
 
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              required
-            />
-          </div>
+        {authMethod === 'email' && (
+          <>
+            <h2>Crie sua conta</h2>
+            <p>Comece seu perfil personalizado agora</p>
 
-          <div className="form-group">
-            <label htmlFor="password">Senha</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              minLength="6"
-            />
-          </div>
+            {error && <div className="error-message">{error}</div>}
 
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirmar Senha</label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              minLength="6"
-            />
-          </div>
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label htmlFor="username">
+                  Username 
+                  {usernameAvailable === true && <span className="status-ok">✓</span>}
+                  {usernameAvailable === false && <span className="status-error">✗</span>}
+                </label>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={handleUsernameChange}
+                  placeholder="seu_username"
+                  required
+                  maxLength="20"
+                />
+                <small>Seu perfil estará em vanta.io/@{username || 'username'}</small>
+              </div>
 
-          <button type="submit" disabled={loading || usernameAvailable === false}>
-            {loading ? 'Criando conta...' : 'Criar conta'}
-          </button>
-        </form>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  required
+                />
+              </div>
 
-        <p className="auth-link">
-          Já tem conta? <Link to="/login">Fazer login</Link>
-        </p>
+              <div className="form-group">
+                <label htmlFor="password">Senha</label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength="6"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Confirmar Senha</label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength="6"
+                />
+              </div>
+
+              <button type="submit" disabled={loading || usernameAvailable === false}>
+                {loading ? 'Criando conta...' : 'Criar conta'}
+              </button>
+            </form>
+
+            <p className="auth-link">
+              Já tem conta? <Link to="/login">Fazer login</Link>
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

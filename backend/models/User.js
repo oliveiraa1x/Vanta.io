@@ -31,9 +31,47 @@ const UserSchema = new mongoose.Schema({
   avatar: { type: String },
   bannerImage: { type: String },
   theme: { type: String, enum: ['dark','light','neon','gradient'], default: 'dark' },
-  backgroundEffect: { type: String, enum: ['none','falling-stars','floating-bubbles','black-hole'], default: 'none' },
+  backgroundEffect: { type: String, enum: ['none','falling-stars','floating-bubbles','black-hole','video'], default: 'none' },
+  backgroundVideo: { type: String }, // Vídeo de fundo (até 15s)
+  backgroundAudio: { type: String }, // Áudio ambiente (genérico/fallback)
+  backgroundAudioDesktop: { type: String }, // Áudio para desktop
+  backgroundAudioMobile: { type: String }, // Áudio para mobile
   links: { type: Array, default: [] },
-  media: { type: Array, default: [] }
+  media: { type: Array, default: [] },
+  // Role e recursos de comunidade
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  badges: {
+    type: [
+      new mongoose.Schema({
+        code: { type: String, required: true },
+        name: { type: String, required: true },
+        iconUrl: { type: String },
+        description: { type: String },
+        source: { type: String, enum: ['admin', 'discord', 'event', 'system'], default: 'admin' },
+        awardedAt: { type: Date, default: Date.now }
+      }, { _id: true })
+    ],
+    default: []
+  },
+  achievements: {
+    type: [
+      new mongoose.Schema({
+        key: { type: String, required: true },
+        title: { type: String, required: true },
+        progress: { type: Number, default: 0 },
+        completedAt: { type: Date }
+      }, { _id: true })
+    ],
+    default: []
+  },
+  // Dados extras do Discord
+  discordPublicFlags: { type: Number },
+  discordAvatarDecoration: { type: String }
+  ,
+  connections: {
+    type: Object,
+    default: {}
+  }
 }, { timestamps: true });
 
 UserSchema.pre('save', async function(next) {

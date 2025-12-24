@@ -17,6 +17,31 @@ body {
   overflow: hidden;
 }
 
+/* Vídeo de fundo */
+.background-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  filter: brightness(0.7);
+  background: #000;
+}
+
+/* Garantir que o conteúdo está acima do vídeo */
+.profile-content {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+}
+
+.public-profile > audio {
+  display: none;
+  z-index: -1;
+}
+
 /* Tema aplicado somente ao cabeçalho do perfil */
 .profile-header.theme-light h1,
 .profile-header.theme-light .username,
@@ -86,44 +111,103 @@ body {
 
 .profile-header {
   text-align: center;
-  margin-bottom: 8px;
-  padding: 12px 12px 8px;
+  margin-bottom: 32px;
+  padding: 40px 20px;
   border-radius: 16px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  background: rgba(26, 26, 46, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
 }
 
-.profile-header .avatar {
-  width: 140px;
-  height: 140px;
+.avatar-section {
+  margin-bottom: 24px;
+}
+
+.avatar-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-wrapper .avatar {
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
-  border: 5px solid #667eea;
-  margin: -10px auto 16px;
+  border: 4px solid #667eea;
   display: block;
   object-fit: cover;
-  box-shadow: 0 12px 44px rgba(102, 126, 234, 0.35);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.avatar-decoration {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 140px;
+  height: 140px;
+  pointer-events: none;
+}
+
+/* Badges em destaque */
+.badges-showcase {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0 20px 0;
+}
+
+.badge-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.15);
+  border: 2px solid #667eea;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.badge-icon:hover {
+  background: rgba(102, 126, 234, 0.25);
+  transform: scale(1.15);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+}
+
+.badge-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .profile-header h1 {
-  font-size: 32px;
+  font-size: 28px;
   margin-bottom: 4px;
   color: #fff;
-  margin-top: 8px;
+  margin-top: 4px;
+  font-weight: 700;
 }
 
 .profile-header .username {
   color: #a0a0a0;
   font-size: 14px;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 .profile-header .bio {
   color: #d0d0d0;
   font-size: 13px;
-  margin-bottom: 6px;
-  line-height: 1.3;
-  max-width: 500px;
+  margin-bottom: 20px;
+  line-height: 1.4;
+  max-width: 400px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -132,33 +216,29 @@ body {
   color: #808080;
   font-size: 12px;
   margin-top: 8px;
-  margin-bottom: 16px;
 }
 
 .links-section,
 .media-section {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .links-section h2,
 .media-section h2 {
   font-size: 14px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   color: #fff;
   text-align: center;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .links-section {
-  margin-bottom: 20px;
+  margin-bottom: 28px;
 }
 
-.links-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Nova grade de ícones de redes */
+/* Grade de ícones de redes */
 .social-icons {
   display: flex;
   flex-wrap: wrap;
@@ -167,21 +247,28 @@ body {
 }
 
 .social-icon {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   color: #fff;
-  background: #1a1a2e;
-  border: 1px solid #2d2d44;
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  background: rgba(102, 126, 234, 0.12);
+  border: 2px solid #667eea;
+  transition: all 0.2s;
+  cursor: pointer;
 }
 
 .social-icon:hover {
-  transform: translateY(-2px);
-  border-color: #667eea;
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.25);
+  transform: translateY(-3px);
+  border-color: #764ba2;
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.25);
+}
+
+.social-icon:hover {
+  transform: translateY(-4px);
+  border-color: #764ba2;
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
 }
 
 /* Cores por plataforma (bordas/sombra sutis) */
@@ -195,6 +282,7 @@ body {
 .social-icon.facebook { border-color: #1877f2; }
 .social-icon.linkedin { border-color: #0a66c2; }
 .social-icon.twitch { border-color: #9146ff; }
+.social-icon.steam { border-color: #1b2838; background: linear-gradient(135deg, #1b2838, #2a475e); }
 
 /* antigo botão permanece como fallback */
 .link-button {
@@ -270,28 +358,259 @@ body {
   width: 100%;
 }
 
-.footer {
+/* Steam Banner Background */
+.steam-banner-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.steam-banner-background img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(8px) brightness(0.3);
+}
+
+/* Featured Steam Game */
+.featured-game-section {
+  width: 100%;
+  max-width: 500px;
+  margin: 24px auto;
+  z-index: 1;
+}
+
+.featured-game-section h2 {
+  font-size: 14px;
+  margin: 0 0 12px 0;
   text-align: center;
-  margin-top: 36px;
-  padding-top: 16px;
-  padding-bottom: 10px;
-  border-top: 1px solid #2d2d44;
-  color: #a0a0a0;
+  color: #f5f5f5;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.footer p {
-  margin-bottom: 6px;
-  font-size: 11px;
+.featured-game-card {
+  background: rgba(26, 26, 46, 0.5);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s;
 }
 
-.footer a {
-  color: #667eea;
-  text-decoration: none;
+.featured-game-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
+}
+
+.game-banner {
+  flex-shrink: 0;
+}
+
+.game-banner img {
+  width: 90px;
+  height: 135px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.game-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.game-details h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #f5f5f5;
   font-weight: 600;
 }
 
-.footer a:hover {
-  text-decoration: underline;
+.game-hours {
+  margin: 0;
+  font-size: 12px;
+  color: #a0a0a0;
+}
+
+.view-on-steam-btn {
+  background: linear-gradient(135deg, #1b2838, #2a475e);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  display: inline-block;
+  margin-top: 8px;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.view-on-steam-btn:hover {
+  background: linear-gradient(135deg, #2a475e, #1b2838);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 40, 56, 0.6);
+}
+
+@media (max-width: 600px) {
+  .featured-game-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .game-banner img {
+    width: 160px;
+    height: 240px;
+  }
+}
+
+/* Remove gallery section completely */
+.media-section,
+.media-container,
+.media-item {
+  display: none !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .profile-header {
+    padding: 24px 16px;
+  }
+
+  .avatar-wrapper {
+    width: 140px;
+    height: 140px;
+  }
+
+  .badges-showcase {
+    gap: 10px;
+  }
+
+  .badge-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  .bio {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-header {
+    padding: 16px 12px;
+  }
+
+  .avatar-section {
+    margin-bottom: 20px;
+  }
+
+  .avatar-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+
+  .avatar-decoration {
+    width: 140px;
+    height: 140px;
+    top: -10px;
+    left: -10px;
+  }
+
+  .badges-showcase {
+    gap: 8px;
+  }
+
+  .badge-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .badge-icon img {
+    width: 28px;
+    height: 28px;
+  }
+
+  h1 {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .bio {
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+
+  .featured-game-section {
+    margin: 24px auto;
+  }
+
+  .featured-game-card {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .game-banner {
+    width: 100%;
+    height: auto;
+  }
+
+  .game-banner img {
+    width: 120px;
+    height: 180px;
+    margin: 0 auto;
+    display: block;
+  }
+
+  .game-details h3 {
+    font-size: 16px;
+  }
+
+  .game-hours {
+    font-size: 12px;
+  }
+
+  .social-icons {
+    gap: 12px;
+  }
+
+  .social-icon {
+    width: 45px;
+    height: 45px;
+    font-size: 22px;
+  }
+
+  .footer {
+    margin-top: 32px;
+    padding: 16px 12px;
+  }
+
+  .footer p {
+    font-size: 11px;
+  }
+
+  .footer a {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
 }
 
 .loading,
@@ -329,41 +648,4 @@ body {
 
 .not-found-content a:hover {
   transform: translateY(-2px);
-}
-
-@media (max-width: 600px) {
-  .public-profile {
-    padding-top: 10px;
-  }
-
-  .profile-content {
-    padding: 20px 18px;
-    max-width: 92vw;
-  }
-
-  .profile-header h1 {
-    font-size: 28px;
-  }
-
-  .profile-header .avatar {
-    width: 120px;
-    height: 120px;
-    margin-top: -60px;
-  }
-
-  .media-container {
-    grid-template-columns: 1fr;
-  }
-
-  .links-container {
-    flex-direction: column;
-  }
-
-  .banner {
-    height: 160px;
-  }
-
-  .media-image img {
-    height: 180px;
-  }
 }

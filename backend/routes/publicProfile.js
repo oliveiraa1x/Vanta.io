@@ -13,7 +13,16 @@ router.get('/public/users', async (req, res) => {
       .limit(50)
       .sort({ createdAt: -1 });
     
-    res.json(users || []);
+    // Adicionar URL completa para avatares que são caminhos relativos
+    const usersWithFullUrls = users.map(user => {
+      const userObj = user.toObject();
+      if (userObj.avatar && !userObj.avatar.startsWith('http')) {
+        userObj.avatar = `${req.protocol}://${req.get('host')}${userObj.avatar}`;
+      }
+      return userObj;
+    });
+    
+    res.json(usersWithFullUrls || []);
   } catch (error) {
     console.error('Erro ao buscar usuários públicos:', error.message);
     res.status(500).json({ error: 'Erro ao buscar usuários' });
@@ -35,7 +44,7 @@ router.get('/@:username', async (req, res) => {
     }
 
     const user = await User.findOne({ username: username.toLowerCase() })
-      .select('username displayName bio avatar bannerImage theme backgroundEffect links media createdAt');
+      .select('username displayName bio avatar bannerImage theme backgroundEffect backgroundVideo backgroundAudio backgroundAudioDesktop backgroundAudioMobile links media connections badges discordAvatarDecoration createdAt');
     
     console.log('Usuário encontrado:', user ? 'SIM' : 'NÃO');
     
@@ -43,17 +52,56 @@ router.get('/@:username', async (req, res) => {
       return res.status(404).json({ error: 'Perfil não encontrado' });
     }
 
+    // Buscar dados da Steam se conectado
+    let steamData = null;
+    if (user.connections?.steam?.steamId) {
+      try {
+        const steamId = user.connections.steam.steamId;
+        const apiKey = process.env.STEAM_API_KEY;
+        
+        if (apiKey) {
+          const fetch = (await import('node-fetch')).default;
+          const profileResponse = await fetch(
+            `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${apiKey}&steamids=${steamId}`
+          );
+          const profileData = await profileResponse.json();
+          
+          if (profileData.response?.players?.length > 0) {
+            const player = profileData.response.players[0];
+            steamData = {
+              profileurl: player.profileurl,
+              avatar: player.avatarfull,
+              banner: player.profilebackground || null
+            };
+          }
+        }
+      } catch (steamError) {
+        console.error('Erro ao buscar dados da Steam:', steamError);
+      }
+    }
+
     res.json({
       username: user.username,
       profile: {
+        username: user.username,
         displayName: user.displayName,
         bio: user.bio,
         avatar: user.avatar,
         bannerImage: user.bannerImage,
         theme: user.theme,
         backgroundEffect: user.backgroundEffect,
+        backgroundVideo: user.backgroundVideo,
+        backgroundAudio: user.backgroundAudio,
+        backgroundAudioDesktop: user.backgroundAudioDesktop,
+        backgroundAudioMobile: user.backgroundAudioMobile,
+        badges: user.badges || [],
+        discordAvatarDecoration: user.discordAvatarDecoration || null,
         links: user.links || [],
-        media: user.media || []
+        media: user.media || [],
+        connections: steamData ? {
+          steam: steamData,
+          steamFeaturedGame: user.connections?.steamFeaturedGame || null
+        } : null
       },
       createdAt: user.createdAt
     });
@@ -80,7 +128,7 @@ router.get('/:username', async (req, res) => {
     }
 
     const user = await User.findOne({ username: username.toLowerCase() })
-      .select('username displayName bio avatar bannerImage theme backgroundEffect links media createdAt');
+      .select('username displayName bio avatar bannerImage theme backgroundEffect backgroundVideo backgroundAudio backgroundAudioDesktop backgroundAudioMobile links media connections badges discordAvatarDecoration createdAt');
     
     console.log('Usuário encontrado:', user ? 'SIM' : 'NÃO');
     
@@ -88,17 +136,56 @@ router.get('/:username', async (req, res) => {
       return res.status(404).json({ error: 'Perfil não encontrado' });
     }
 
+    // Buscar dados da Steam se conectado
+    let steamData = null;
+    if (user.connections?.steam?.steamId) {
+      try {
+        const steamId = user.connections.steam.steamId;
+        const apiKey = process.env.STEAM_API_KEY;
+        
+        if (apiKey) {
+          const fetch = (await import('node-fetch')).default;
+          const profileResponse = await fetch(
+            `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${apiKey}&steamids=${steamId}`
+          );
+          const profileData = await profileResponse.json();
+          
+          if (profileData.response?.players?.length > 0) {
+            const player = profileData.response.players[0];
+            steamData = {
+              profileurl: player.profileurl,
+              avatar: player.avatarfull,
+              banner: player.profilebackground || null
+            };
+          }
+        }
+      } catch (steamError) {
+        console.error('Erro ao buscar dados da Steam:', steamError);
+      }
+    }
+
     res.json({
       username: user.username,
       profile: {
+        username: user.username,
         displayName: user.displayName,
         bio: user.bio,
         avatar: user.avatar,
         bannerImage: user.bannerImage,
         theme: user.theme,
         backgroundEffect: user.backgroundEffect,
+        backgroundVideo: user.backgroundVideo,
+        backgroundAudio: user.backgroundAudio,
+        backgroundAudioDesktop: user.backgroundAudioDesktop,
+        backgroundAudioMobile: user.backgroundAudioMobile,
+        badges: user.badges || [],
+        discordAvatarDecoration: user.discordAvatarDecoration || null,
         links: user.links || [],
-        media: user.media || []
+        media: user.media || [],
+        connections: steamData ? {
+          steam: steamData,
+          steamFeaturedGame: user.connections?.steamFeaturedGame || null
+        } : null
       },
       createdAt: user.createdAt
     });

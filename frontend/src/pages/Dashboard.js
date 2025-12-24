@@ -23,10 +23,24 @@ function Dashboard() {
   const [emailPassword, setEmailPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  // Social connections
+  const [connections, setConnections] = useState({ steam: false });
+  const [steamGames, setSteamGames] = useState([]);
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [loadingGames, setLoadingGames] = useState(false);
+  // Background audio e video
+  const [backgroundAudio, setBackgroundAudio] = useState('');
+  const [backgroundAudioDesktop, setBackgroundAudioDesktop] = useState('');
+  const [backgroundAudioMobile, setBackgroundAudioMobile] = useState('');
+  const [backgroundVideo, setBackgroundVideo] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchUserData();
+    // Detectar se é mobile
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    setIsMobile(/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua.toLowerCase()));
   }, []);
 
   const fetchDiscordAuthUrl = async () => {
@@ -47,12 +61,28 @@ function Dashboard() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const tokenFromCallback = params.get('token');
+    if (tokenFromCallback) {
+      localStorage.setItem('token', tokenFromCallback);
+      // Limpar token da URL
+      params.delete('token');
+      const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+      window.history.replaceState({}, '', newUrl);
+      // Carregar dados com o novo token
+      fetchUserData();
+    }
     const discordCode = params.get('code');
     if (discordCode) {
       handleConnectDiscord(discordCode);
       params.delete('code');
       const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
       window.history.replaceState({}, '', newUrl);
+    }
+
+    // Handle Steam OpenID callback
+    const steamMode = params.get('openid.mode');
+    if (steamMode === 'id_res') {
+      handleConnectSteam(params);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -69,8 +99,20 @@ function Dashboard() {
       setBio(response.data.bio || '');
       setTheme(response.data.theme || 'dark');
       setBackgroundEffect(response.data.backgroundEffect || 'none');
+      setBackgroundAudio(response.data.backgroundAudio || '');
+      setBackgroundAudioDesktop(response.data.backgroundAudioDesktop || '');
+      setBackgroundAudioMobile(response.data.backgroundAudioMobile || '');
+      setBackgroundVideo(response.data.backgroundVideo || '');
       setLinks(response.data.links || []);
       setMedia(response.data.media || []);
+      // badges são somente leitura para membros
+      // response.data.badges disponível após atualização do backend
+      // If backend returns connections within user object
+      if (response.data.connections) {
+        setConnections({
+          steam: !!response.data.connections.steam,
+        });
+      }
       // Discord connection status would come from backend when available
       setLoading(false);
     } catch (error) {
@@ -79,6 +121,100 @@ function Dashboard() {
         navigate('/login');
       }
       setLoading(false);
+    }
+  };
+
+  const fetchConnections = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const resp = await axios.get('/api/profile/connections', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = resp.data || {};
+      setConnections({
+        steam: !!data.steam,
+      });
+
+      // Se Steam conectada, buscar jogos
+      if (data.steam) {
+        fetchSteamGames();
+      }
+    } catch (error) {
+      console.warn('Não foi possível buscar conexões', error?.response?.data || error.message);
+    }
+  };
+
+  const fetchSteamGames = async () => {
+    try {
+      setLoadingGames(true);
+      const token = localStorage.getItem('token');
+      const resp = await axios.get('/api/profile/steam/games', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSteamGames(resp.data.games || []);
+    } catch (error) {
+      console.warn('Erro ao buscar jogos Steam:', error?.response?.data || error.message);
+    } finally {
+      setLoadingGames(false);
+    }
+  };
+
+  const handleSelectGame = async (game) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('/api/profile/steam/featured-game', game, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedGame(game);
+      setMessage('Jogo destacado atualizado!');
+    } catch (error) {
+      setMessage(error?.response?.data?.error || 'Erro ao selecionar jogo');
+    } finally {
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  useEffect(() => { fetchConnections(); }, []);
+
+  const handleConnectPlatform = async (platform) => {
+    try {
+      if (platform === 'steam') {
+        // Redirecionar para Steam OpenID
+        const token = localStorage.getItem('token');
+        const resp = await axios.get('/api/profile/steam/auth-url', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resp.data.url) {
+          window.location.href = resp.data.url;
+        }
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/profile/connections/${platform}/connect`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMessage(`${platform} conectado com sucesso!`);
+      await fetchConnections();
+    } catch (error) {
+      setMessage(error?.response?.data?.error || `Erro ao conectar ${platform}`);
+    } finally {
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  const handleDisconnectPlatform = async (platform) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/profile/connections/${platform}/disconnect`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMessage(`${platform} desconectado com sucesso!`);
+      await fetchConnections();
+    } catch (error) {
+      setMessage(error?.response?.data?.error || `Erro ao desconectar ${platform}`);
+    } finally {
+      setTimeout(() => setMessage(''), 3000);
     }
   };
 
@@ -180,6 +316,78 @@ function Dashboard() {
     }
   };
 
+  const handleUploadBackgroundAudio = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('audio', file);
+    formData.append('deviceType', isMobile ? 'mobile' : 'desktop');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post('/api/profile/upload/background-audio', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      if (isMobile) {
+        setBackgroundAudioMobile(response.data.url);
+      } else {
+        setBackgroundAudioDesktop(response.data.url);
+      }
+      setMessage(`Áudio de fundo atualizado para ${isMobile ? 'mobile' : 'desktop'}!`);
+      // Recarregar dados do usuário para garantir sincronização
+      await fetchUserData();
+    } catch (error) {
+      setMessage('Erro ao fazer upload do áudio de fundo');
+    } finally {
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  const handleUploadBackgroundVideo = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validar duração do vídeo (15s)
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    
+    video.onloadedmetadata = async function() {
+      window.URL.revokeObjectURL(video.src);
+      if (video.duration > 15) {
+        setMessage('O vídeo deve ter no máximo 15 segundos!');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('video', file);
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post('/api/profile/upload/background-video', formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        setBackgroundVideo(response.data.url);
+        setBackgroundEffect('video');
+        setMessage('Vídeo de fundo atualizado!');
+        // Recarregar dados do usuário para garantir sincronização
+        await fetchUserData();
+      } catch (error) {
+        setMessage('Erro ao fazer upload do vídeo de fundo');
+      } finally {
+        setTimeout(() => setMessage(''), 3000);
+      }
+    };
+
+    video.src = URL.createObjectURL(file);
+  };
+
   const handleAddLink = async (e) => {
     e.preventDefault();
     if (!newLink.title || !newLink.url) return;
@@ -262,6 +470,33 @@ function Dashboard() {
     }
   };
 
+  const handleConnectSteam = async (params) => {
+    try {
+      const token = localStorage.getItem('token');
+      const openidParams = {};
+      for (const [key, value] of params.entries()) {
+        if (key.startsWith('openid.')) {
+          openidParams[key] = value;
+        }
+      }
+
+      await axios.post('/api/profile/steam/connect', { openidParams }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMessage('Steam conectado com sucesso!');
+      fetchUserData();
+      fetchConnections();
+      
+      // Limpar URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } catch (error) {
+      console.error('Erro ao conectar Steam', error?.response?.data || error.message);
+      setMessage(error?.response?.data?.error || 'Erro ao conectar Steam');
+    } finally {
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
   const handleUpdateEmail = async (e) => {
     e.preventDefault();
     try {
@@ -327,13 +562,29 @@ function Dashboard() {
     <div className="dashboard-container">
       <header className="dashboard-header">
         <div className="header-content">
-          <h1>🎯 Vanta.io Dashboard</h1>
-          <button onClick={handleLogout} className="logout-btn">Sair</button>
+          <div className="header-brand">
+            <img src="/favicon.png" alt="Vanta.io" className="brand-logo" />
+            <h1>Vanta.io Dashboard</h1>
+          </div>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {user?.role === 'admin' && (
+              <button onClick={() => navigate('/admin')} style={{ padding: '8px 16px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', borderRadius: 6, color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+                🔧 Admin
+              </button>
+            )}
+            <button onClick={handleLogout} className="logout-btn">Sair</button>
+          </div>
         </div>
       </header>
 
       <div className="dashboard-content">
         <nav className="dashboard-nav">
+          <button 
+            className={`nav-btn ${activeTab === 'account' ? 'active' : ''}`}
+            onClick={() => setActiveTab('account')}
+          >
+            Conta
+          </button>
           <button 
             className={`nav-btn ${activeTab === 'profile' ? 'active' : ''}`}
             onClick={() => setActiveTab('profile')}
@@ -353,10 +604,10 @@ function Dashboard() {
             Links
           </button>
           <button 
-            className={`nav-btn ${activeTab === 'account' ? 'active' : ''}`}
-            onClick={() => setActiveTab('account')}
+            className={`nav-btn ${activeTab === 'connections' ? 'active' : ''}`}
+            onClick={() => setActiveTab('connections')}
           >
-            Conta
+            Conexões
           </button>
           <button 
             className={`nav-btn ${activeTab === 'preview' ? 'active' : ''}`}
@@ -434,9 +685,57 @@ function Dashboard() {
                     <option value="falling-stars">Estrelas Caindo ⭐</option>
                     <option value="floating-bubbles">Bolhas Flutuantes 🫧</option>
                     <option value="black-hole">Buraco Negro 🌌</option>
+                    <option value="video">Vídeo Personalizado 🎬</option>
                   </select>
                   <small>As cores do efeito vão acompanhar seu banner</small>
                 </div>
+
+                {backgroundEffect === 'video' && (
+                  <div className="upload-area">
+                    <label>Upload de Vídeo de Fundo (máx 15 segundos)</label>
+                    <input 
+                      type="file" 
+                      accept="video/*,.gif"
+                      onChange={handleUploadBackgroundVideo}
+                      className="file-input"
+                    />
+                    <small>Formatos: MP4, WEBM, GIF - Máximo 15 segundos - Vídeo roda mutado em loop no fundo</small>
+                    {backgroundVideo && <p style={{color: '#43d17a', marginTop: '8px'}}>✓ Vídeo de fundo configurado</p>}
+                  </div>
+                )}
+
+                {/* Badges do usuário (somente leitura) */}
+                {user?.badges && user.badges.length > 0 && (
+                  <div className="form-group">
+                    <label>Insígnias de Perfil</label>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {user.badges.map((b) => {
+                        const code = String(b.code || '').toLowerCase();
+                        const defaultSrc = code.includes('nitro') && !code.includes('classic')
+                          ? 'https://cdn.discordapp.com/badge-icons/0e291f67631e374140365a44a1574eae.png'
+                          : code.includes('classic')
+                            ? 'https://cdn.discordapp.com/badge-icons/7e46d5595367ef7588c4e87feba64666.png'
+                            : 'https://cdn-icons-png.flaticon.com/512/7595/7595571.png';
+                        const src = b.iconUrl || defaultSrc;
+                        return (
+                          <div key={b._id || b.code} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1a1a2e', border: '1px solid #2d2d44', padding: '6px 10px', borderRadius: 999 }}>
+                            <img
+                              src={src}
+                              alt={b.name}
+                              style={{ width: 18, height: 18 }}
+                              onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = defaultSrc;
+                              }}
+                            />
+                            <span style={{ fontSize: 12 }}>{b.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <small>Insígnias atribuídas podem ser vistas no perfil público.</small>
+                  </div>
+                )}
 
                 <button type="submit" disabled={saving}>
                   {saving ? 'Salvando...' : 'Salvar Perfil'}
@@ -450,26 +749,41 @@ function Dashboard() {
               <h2>Sua Mídia</h2>
               
               <div className="upload-area">
-                <label>Adicionar Imagem ou GIF</label>
+                <label>🎵 Áudio Ambiente para {isMobile ? 'Celular' : 'Desktop'} (toca em segundo plano)</label>
+                <input 
+                  type="file" 
+                  accept="audio/*"
+                  onChange={handleUploadBackgroundAudio}
+                  className="file-input"
+                />
+                <small>Formatos: MP3, WAV, OGG, M4A - O áudio será reproduzido automaticamente no perfil público em segundo plano</small>
+                <small style={{display: 'block', marginTop: '8px', color: '#999'}}>💡 Você está acessando via {isMobile ? 'celular' : 'desktop'}, então este áudio será salvo para {isMobile ? 'dispositivos móveis' : 'computadores'}</small>
+                {(isMobile ? backgroundAudioMobile : backgroundAudioDesktop) && <p style={{color: '#43d17a', marginTop: '8px'}}>✓ Áudio configurado para {isMobile ? 'mobile' : 'desktop'}</p>}
+                {!isMobile && backgroundAudioMobile && <p style={{color: '#ffa500', marginTop: '8px', fontSize: '12px'}}>ℹ️ Seu celular tem um áudio diferente configurado</p>}
+                {isMobile && backgroundAudioDesktop && <p style={{color: '#ffa500', marginTop: '8px', fontSize: '12px'}}>ℹ️ Seu desktop tem um áudio diferente configurado</p>}
+              </div>
+
+              <div className="upload-area">
+                <label>Adicionar Imagem ou GIF para Galeria</label>
                 <input 
                   type="file" 
                   accept="image/*"
                   onChange={handleUploadMedia}
                   className="file-input"
                 />
-                <small>Formatos: JPG, PNG, GIF (máx 50MB)</small>
+                <small>Formatos: JPG, PNG, GIF (máx 50MB) - Aparece na galeria do perfil</small>
               </div>
 
-              <div className="upload-area">
-                <label>Adicionar Áudio/Música</label>
-                <input 
-                  type="file" 
-                  accept="audio/*"
-                  onChange={handleUploadMedia}
-                  className="file-input"
-                />
-                <small>Formatos: MP3, WAV (máx 50MB)</small>
-              </div>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setMessage('Alterações salvas! As mídias são salvas automaticamente ao fazer upload.');
+                  setTimeout(() => setMessage(''), 3000);
+                }}
+                style={{ marginTop: '16px', marginBottom: '16px' }}
+              >
+                Salvar Alterações
+              </button>
 
               <div className="media-grid">
                 {media.length === 0 ? (
@@ -564,6 +878,63 @@ function Dashboard() {
                   ))
                 )}
               </div>
+            </section>
+          )}
+
+          {activeTab === 'connections' && (
+            <section className="section">
+              <h2>Conexões</h2>
+              <p>Vincule suas contas de jogos para enriquecer seu perfil.</p>
+              <div className="connections-grid">
+                <div className="connection-card">
+                  <div className="connection-header">
+                    <h3>Steam</h3>
+                    <span className={`status ${connections.steam ? 'on' : 'off'}`}>{connections.steam ? 'Conectado' : 'Desconectado'}</span>
+                  </div>
+                  <div className="connection-actions">
+                    {connections.steam ? (
+                      <button className="disconnect-btn" onClick={() => handleDisconnectPlatform('steam')}>Remover conexão</button>
+                    ) : (
+                      <button className="connect-btn" onClick={() => handleConnectPlatform('steam')}>Conectar Steam</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {connections.steam && (
+                <div className="featured-game-section">
+                  <h3>Jogo em Destaque</h3>
+                  <p>Escolha um jogo da sua biblioteca para destacar no perfil:</p>
+                  
+                  {loadingGames ? (
+                    <div className="loading-games">Carregando jogos...</div>
+                  ) : steamGames.length > 0 ? (
+                    <div className="games-grid">
+                      {steamGames.map(game => (
+                        <div 
+                          key={game.appid} 
+                          className={`game-card ${selectedGame?.appid === game.appid ? 'selected' : ''}`}
+                          onClick={() => handleSelectGame(game)}
+                        >
+                          <img 
+                            src={`https://media.steampowered.com/steamcommunity/public/images/apps/${game.appid}/${game.img_icon_url}.jpg`}
+                            alt={game.name}
+                            onError={(e) => { e.target.src = '/favicon.png'; }}
+                          />
+                          <div className="game-info">
+                            <h4>{game.name}</h4>
+                            <p>{Math.round(game.playtime_forever / 60)} horas</p>
+                          </div>
+                          {selectedGame?.appid === game.appid && <span className="check-icon">✓</span>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="no-games">Nenhum jogo encontrado na sua biblioteca Steam.</p>
+                  )}
+                </div>
+              )}
+              <small style={{color:'#a0a0a0'}}>Obs: algumas conexões podem redirecionar para autenticação externa.</small>
             </section>
           )}
 
