@@ -63,23 +63,9 @@ Para mais detalhes sobre a licença, consulte [CODE_LICENSE.md](CODE_LICENSE.md)
 
 ---
 
-
-## 📝 Changelog
-
-### v1.0.0 (23 de Dezembro de 2025)
-- ✅ Release inicial
-- ✅ Migração para PostgreSQL
-- ✅ Deploy em SquareCloud configurado
-- ✅ Documentação completa
-- ✅ Licença MIT
-
----
-
 ## 🙏 Agradecimentos
 
 Obrigado por usar Vanta.io! Este projeto foi desenvolvido com dedicação para a comunidade.
-
----
 
 ---  
 **Criado em**: Dezembro 2025  
